@@ -1,50 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace ServerApp
 {
     public class ChatServer
     {
-        const short port = 4040;
-        const string JOIN_CMD = "$<join>";
-        HashSet<IPEndPoint> members = new HashSet<IPEndPoint>();
-        UdpClient server = new UdpClient(port);
-        IPEndPoint clientEndPoint = null;
-        private void AddMember(IPEndPoint member)
+        const short port = 4041;
+        const string address = "127.0.0.1";
+
+        TcpListener listener = null;
+        public ChatServer()
         {
-            members.Add(member);
-            Console.WriteLine("Members was added!!!");
-        }
-        private void SendToAll(byte[]data)
-        {
-            foreach (var m in members)
-            {
-                server.SendAsync(data, data.Length, m);
-            }
+            listener = new TcpListener(IPAddress.Parse(address), port);
         }
         public void Start()
         {
+            listener.Start();
+            Console.WriteLine("Waiting for connection ......");
+            TcpClient client = listener.AcceptTcpClient();
+            Console.WriteLine("Connected ......");
+            NetworkStream ns = client.GetStream();
+            StreamReader sr = new StreamReader(ns);
+            StreamWriter sw = new StreamWriter(ns);
+
             while (true)
             {
-                byte[] data = server.Receive(ref clientEndPoint);
-                string message = Encoding.UTF8.GetString(data);
+                string message = sr.ReadLine();
                 Console.WriteLine($"Got : {message} at " +
-                    $"{DateTime.Now.ToShortTimeString()} from {clientEndPoint}");
-                switch (message)
-                {
-                    case JOIN_CMD:
-                        AddMember(clientEndPoint);
-                        break;
-                    default:
-                        SendToAll(data);
-                        break;
-                }
+                    $"{DateTime.Now.ToShortTimeString()} from {client.Client.LocalEndPoint}");
+                sw.WriteLine("Thanks!!!");
+                sw.Flush();
             }
-
         }
 
     }
@@ -54,9 +46,9 @@ namespace ServerApp
         {
             ChatServer server = new ChatServer();
             server.Start();
-           
-           
+
+
         }
-    
+
     }
 }
